@@ -1,0 +1,230 @@
+{
+  "name": "AI Job Application Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-job-app-prod",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5146f434-45ea-4a55-ad2f-6916faa76031",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        384,
+        352
+      ],
+      "webhookId": "df222678-ef49-44fb-8f41-635342bace6d"
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  job_post: $json.body.job_post,\n  resume_text: $json.body.resume_text,\n  email: $json.body.email\n}];"
+      },
+      "id": "645b47ed-71f5-4229-a8f7-1ba5a37e91e4",
+      "name": "Prepare Data",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        608,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "return [{\n  email: $node[\"Prepare Data\"].json.email,\n  cover_letter: $json.cover_letter,\n  resume_summary: $json.resume_summary\n}];"
+      },
+      "id": "18f4a426-029e-4421-a2dc-23524e1aece7",
+      "name": "Format Output",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        1184,
+        352
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "Your AI-Generated Job Application Materials 🚀",
+        "includeHtml": true,
+        "htmlMessage": "=Cover Letter: {{$json[\"cover_letter\"]}}\n\nResume Summary: {{$json[\"resume_summary\"]}}",
+        "message": "=<h2>🚀 Your AI-Generated Job Application Materials</h2>  <h3>📄 Cover Letter</h3> <p>{{$json[\"cover_letter\"]}}</p>  <hr>  <h3>🧠 Resume Summary</h3> <p>{{$json[\"resume_summary\"]}}</p>  <br><br>  <p>Best regards,<br><b>AI Job Application Assistant</b></p>",
+        "additionalFields": {}
+      },
+      "id": "870a3642-0d44-4676-821a-67ee7d7c9a84",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 1,
+      "position": [
+        1408,
+        352
+      ],
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "bYuJwYC95Ll9mapR",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "allIncomingItems",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1632,
+        352
+      ],
+      "id": "8afdc812-cc2c-4981-ba6a-ace5ee02f75e",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Job Post:\n{{$json.job_post}}\n\nResume:\n{{$json.resume_text}}\n\nEmail:\n{{$json.email}}",
+        "options": {
+          "systemMessage": "You are an expert HR assistant AI.\n\nYour task:\n- Read a job post\n- Read a candidate resume\n- Generate:\n  1. A personalized cover letter\n  2. A short resume summary tailored to the job\n\nReturn output in JSON format ONLY:\n\n{\n  \"cover_letter\": \"\",\n  \"resume_summary\": \"\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        832,
+        352
+      ],
+      "id": "97ca3ceb-dec7-4bfc-a408-61aff9753749",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        840,
+        576
+      ],
+      "id": "bc1888f1-abab-4ba7-84c1-6d2d775d20f9",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "pODke5XkK2ciwJZg",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        968,
+        576
+      ],
+      "id": "b9d10667-a2cf-4fca-ab19-0260fe627807",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Prepare Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Data": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Output": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a628aa2a-cccf-4bd8-9334-095733fff4fd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6a168d7168bfc868e7c32fcc184a7f4488e8a5945be51bb0d62adc01b20a1362"
+  },
+  "id": "Mwhiaz9KJkcsTJBG",
+  "tags": []
+}
